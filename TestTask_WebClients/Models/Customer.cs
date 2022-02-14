@@ -27,6 +27,9 @@ namespace TestTask_WebClients.Models
         [Column("emails")]
         public string Emails { get; set; }
 
+        /// <summary>
+        /// true - is female, false - is male
+        /// </summary>
         [Column("gender")]
         public bool Gender { get; set; }
 
