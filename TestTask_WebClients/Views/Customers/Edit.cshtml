@@ -1,7 +1,7 @@
 ﻿@model TestTask_WebClients.Models.Customer
 
 <script>
-    $(document).ready(function () {
+    function setSubmit() {
         $('#editForm').submit(function (event) {
             event.preventDefault();
 
@@ -12,25 +12,24 @@
                 type: 'PUT',
                 contentType: "application/x-www-form-urlencoded",
                 data: formData,
-                success: function (data) {
+                success: function (resp) {
                     if (data == null || data == "" || data == undefined) {
-                        console.log("location");
                         window.location = '/Customers';
                     }
                     else {
-                        console.log("Change document")
-
-                        $("html").html(data);
+                        document.getElementsByTagName('html')[0].innerHTML = resp;
+                        setSubmit();
                     }
                 },
-                error: function (ret) {
+                error: function (resp) {
                     console.log("error");
-                    console.log(ret);
-                    //window.location = '/Links/DownloadFile?file=' + ret.responseText;
+                    console.log(resp);
                 }
-            });
-        })
-    })
+            })
+        });
+    }
+
+    $(document).ready(setSubmit)
 </script>
 
 <h4>Customer</h4>
