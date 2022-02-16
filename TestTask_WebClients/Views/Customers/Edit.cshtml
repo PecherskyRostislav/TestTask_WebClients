@@ -1,10 +1,43 @@
 ﻿@model TestTask_WebClients.Models.Customer
 
+<script>
+    $(document).ready(function () {
+        $('#editForm').submit(function (event) {
+            event.preventDefault();
+
+            var formData = $('#editForm').serialize();
+
+            $.ajax({
+                url: '/Customers/Edit/' + $('#Id').val(),
+                type: 'PUT',
+                contentType: "application/x-www-form-urlencoded",
+                data: formData,
+                success: function (data) {
+                    if (data == null || data == "" || data == undefined) {
+                        console.log("location");
+                        window.location = '/Customers';
+                    }
+                    else {
+                        console.log("Change document")
+
+                        $("html").html(data);
+                    }
+                },
+                error: function (ret) {
+                    console.log("error");
+                    console.log(ret);
+                    //window.location = '/Links/DownloadFile?file=' + ret.responseText;
+                }
+            });
+        })
+    })
+</script>
+
 <h4>Customer</h4>
 <hr />
 <div class="row">
     <div class="col-md-4">
-        <form asp-action="Edit">
+        <form id="editForm" asp-action="Edit">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <input type="hidden" asp-for="Id" />
             <div class="form-group">

@@ -31,12 +31,13 @@ namespace TestTask_WebClients
                     var services = scope.ServiceProvider;
                     try
                     {
+                        Log.Information("Reinialize db data - start");
                         var context = services.GetRequiredService<ContextDb>();
                         DbInitializer.Initialize(context);
+                        Log.Information("Reinialize db data - done");
                     }
                     catch (Exception ex)
                     {
-
                         Log.Error(ex, "An error occurred while seeding the database.");
                     }
                 }

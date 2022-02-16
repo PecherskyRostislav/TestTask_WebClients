@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using TestTask_WebClients.EntityContext;
 using TestTask_WebClients.Models;
 
@@ -13,19 +15,33 @@ namespace TestTask_WebClients.Controllers
     public class CustomersController : Controller
     {
         private readonly ContextDb _context;
+        private readonly ILogger _logger;
 
-        public CustomersController(ContextDb context)
+        public CustomersController(ContextDb context, ILogger<CustomersController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: Customers
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Customers.ToListAsync());
+            List<Customer> customers;
+            try
+            {
+                customers = await _context.Customers.ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "CustomersController -> Index -> Get customers");
+                customers = new List<Customer>();
+            }
+            return View(customers);
         }
 
         // GET: Customers/Details/5
+        [HttpGet]
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -33,90 +49,132 @@ namespace TestTask_WebClients.Controllers
                 return NotFound();
             }
 
-            var customer = await _context.Customers
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (customer == null)
+
+            Customer customer = null;
+            try
             {
-                return NotFound();
+                customer = await _context.Customers.FirstOrDefaultAsync(m => m.Id == id);
+                if (customer == null)
+                {
+                    _logger.LogDebug($"CustomersController -> Details -> Сan't find customers by id {id}");
+                    return NotFound();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"CustomersController -> Details -> Сan't get Customer by id {id}");
             }
 
             return View(customer);
         }
 
         // GET: Customers/Create
+        [HttpGet]
         public IActionResult Create()
         {
             return View();
         }
 
         // POST: Customers/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,FirstName,LastName,Emails,Gender,DayOfBirth")] Customer customer)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(customer);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                var mailExist = await _context.Customers.AnyAsync(x => x.Emails.Equals(customer.Emails));
+                if (mailExist)
+                {
+                    ModelState.AddModelError("Emails", "Customer with this email address already exists.");
+                }
+                else
+                {
+                    try
+                    {
+                        _context.Add(customer);
+                        await _context.SaveChangesAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, $"CustomersController -> Create -> Can`t add customer '{JsonConvert.SerializeObject(customer)}'");
+                    }
+
+                    return RedirectToAction(nameof(Index));
+                }
             }
             return View(customer);
         }
 
         // GET: Customers/Edit/5
+        [HttpGet]
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
             {
                 return NotFound();
             }
-
-            var customer = await _context.Customers.FindAsync(id);
-            if (customer == null)
+            Customer customer = null;
+            try
             {
-                return NotFound();
+                customer = await _context.Customers.FindAsync(id);
+                if (customer == null)
+                {
+                    _logger.LogDebug($"CustomersController -> Edit -> Сan't find customers by id {id}");
+                    return NotFound();
+                }
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"CustomersController -> Edit -> Сan't get Customer by id {id}");
+            }
+
             return View(customer);
         }
 
-        // POST: Customers/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,FirstName,LastName,Emails,Gender,DayOfBirth")] Customer customer)
+        // Put: Customers/Edit/5
+        [HttpPut]
+        public async Task<IActionResult> Edit(int id, Customer customer)
         {
-            if (id != customer.Id)
+            if (customer == null || id != customer.Id)
             {
                 return NotFound();
             }
 
             if (ModelState.IsValid)
             {
-                try
+                // if another customer have current email
+                var mailExist = await _context.Customers.AnyAsync(x => x.Emails.Equals(customer.Emails) && x.Id != customer.Id);
+                if (mailExist)
                 {
-                    _context.Update(customer);
-                    await _context.SaveChangesAsync();
+                    ModelState.AddModelError("Emails", "Customer with this email address already exists.");
                 }
-                catch (DbUpdateConcurrencyException)
+                else
                 {
-                    if (!CustomerExists(customer.Id))
+                    try
                     {
-                        return NotFound();
+                        _context.Update(customer);
+                        await _context.SaveChangesAsync();
                     }
-                    else
+                    catch (DbUpdateConcurrencyException ex)
                     {
-                        throw;
+                        if (!CustomerExists(customer.Id))
+                        {
+                            _logger.LogError(ex, "CustomersController -> DbUpdateConcurrencyException -> Edit -> Update customer");
+                            return NotFound();
+                        }
                     }
-                }
-                return RedirectToAction(nameof(Index));
+                    catch(Exception ex)
+                    {
+                        _logger.LogError(ex, "CustomersController -> Exception -> Edit -> Update customer");
+                    }
+                    return Ok();
+                } 
             }
             return View(customer);
         }
 
         // GET: Customers/Delete/5
+        [HttpGet]
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -124,24 +182,46 @@ namespace TestTask_WebClients.Controllers
                 return NotFound();
             }
 
-            var customer = await _context.Customers
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (customer == null)
+            Customer customer = null;
+            try
             {
-                return NotFound();
+                customer = await _context.Customers.FirstOrDefaultAsync(m => m.Id == id);
+                if (customer == null)
+                {
+                    _logger.LogDebug($"CustomersController -> Delete -> Сan't find customers by id {id}");
+                    return NotFound();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"CustomersController -> Delete -> Сan't get Customer by id {id}");
             }
 
             return View(customer);
         }
 
-        // POST: Customers/Delete/5
-        [HttpPost, ActionName("Delete")]
+        // Delete: Customers/Delete/5
+        [HttpDelete, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var customer = await _context.Customers.FindAsync(id);
-            _context.Customers.Remove(customer);
-            await _context.SaveChangesAsync();
+            if (customer == null)
+            {
+                _logger.LogDebug($"CustomersController -> DeleteConfirmed -> Сan't find customers by id {id}");
+                return NotFound();
+            }
+
+            try
+            {
+                _context.Customers.Remove(customer);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"CustomersController -> DeleteConfirmed -> Сan't delete customers by id {id}");
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
