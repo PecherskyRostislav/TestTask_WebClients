@@ -59,8 +59,8 @@ namespace TestTask_WebClients
             Host.CreateDefaultBuilder(args)
                 .UseSerilog()
                 .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.UseStartup<Startup>();
-                });
+                    {
+                        webBuilder.UseStartup<Startup>();
+                    });
     }
 }

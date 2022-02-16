@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using TestTask_WebClients.Models;
 
 namespace TestTask_WebClients.EntityContext
@@ -98,7 +96,7 @@ namespace TestTask_WebClients.EntityContext
                     FirstName = "Julia",
                     LastName = "Weels",
                     Emails = "Julia_Fox7939@jiman.org",
-                    Gender = false,
+                    Gender = true,
                     DayOfBirth = DateTime.Parse("1978-11-12")
                 }               
             };
