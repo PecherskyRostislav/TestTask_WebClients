@@ -202,7 +202,6 @@ namespace TestTask_WebClients.Controllers
 
         // Delete: Customers/Delete/5
         [HttpDelete, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var customer = await _context.Customers.FindAsync(id);
@@ -222,7 +221,7 @@ namespace TestTask_WebClients.Controllers
                 _logger.LogError(ex, $"CustomersController -> DeleteConfirmed -> Сan't delete customers by id {id}");
             }
 
-            return RedirectToAction(nameof(Index));
+            return Ok();
         }
 
         private bool CustomerExists(int id)
