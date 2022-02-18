@@ -63,6 +63,10 @@ namespace TestTask_WebClients
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Customers}/{action=Index}/{id?}");
+
+                endpoints.MapControllerRoute(
+                    name: "api",
+                    pattern: "{controller=CustomersApi}/{action=Index}/{id?}");
             });
         }
     }
